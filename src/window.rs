@@ -1,4 +1,5 @@
 use image::RgbaImage;
+use windows::Win32::Foundation::HWND;
 
 use crate::{error::XCapResult, platform::impl_window::ImplWindow, Monitor};
 
@@ -77,6 +78,10 @@ impl Window {
     /// The window is focused.
     pub fn is_focused(&self) -> XCapResult<bool> {
         self.impl_window.is_focused()
+    }
+
+    pub fn hwnd(&self) -> HWND {
+        self.impl_window.hwnd()
     }
 }
 

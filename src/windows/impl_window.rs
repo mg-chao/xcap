@@ -429,4 +429,10 @@ impl ImplWindow {
 
         capture_window(self.hwnd, scale_factor)
     }
+
+    pub fn hwnd(&self) -> HWND {
+        self.hwnd
+    }
 }
+
+
