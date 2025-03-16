@@ -430,8 +430,8 @@ impl ImplWindow {
         capture_window(self.hwnd, scale_factor)
     }
 
-    pub fn hwnd(&self) -> HWND {
-        self.hwnd
+    pub fn hwnd(&self) -> XCapResult<*mut c_void> {
+        return XCapResult::Ok(self.hwnd.0)
     }
 }
 

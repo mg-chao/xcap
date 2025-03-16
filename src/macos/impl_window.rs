@@ -385,4 +385,8 @@ impl ImplWindow {
             self.window_id,
         )
     }
+
+    pub fn hwnd(&self) -> XCapResult<*mut c_void> {
+        return None;
+    }
 }

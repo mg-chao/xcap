@@ -1,3 +1,5 @@
+use std::ffi::c_void;
+
 use image::RgbaImage;
 use windows::Win32::Foundation::HWND;
 
@@ -80,7 +82,7 @@ impl Window {
         self.impl_window.is_focused()
     }
 
-    pub fn hwnd(&self) -> HWND {
+    pub fn hwnd(&self) -> XCapResult<*mut c_void> {
         self.impl_window.hwnd()
     }
 }
