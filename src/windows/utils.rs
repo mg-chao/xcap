@@ -1,30 +1,30 @@
 use std::mem;
 
 use image::RgbaImage;
-use scopeguard::{guard, ScopeGuard};
+use scopeguard::{ScopeGuard, guard};
 use widestring::U16CString;
 use windows::{
-    core::{s, w, HRESULT, PCWSTR},
     Win32::{
         Devices::Display::{
-            DisplayConfigGetDeviceInfo, GetDisplayConfigBufferSizes, QueryDisplayConfig,
             DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME, DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME,
             DISPLAYCONFIG_DEVICE_INFO_HEADER, DISPLAYCONFIG_MODE_INFO, DISPLAYCONFIG_PATH_INFO,
             DISPLAYCONFIG_SOURCE_DEVICE_NAME, DISPLAYCONFIG_TARGET_DEVICE_NAME,
-            QDC_ONLY_ACTIVE_PATHS,
+            DisplayConfigGetDeviceInfo, GetDisplayConfigBufferSizes, QDC_ONLY_ACTIVE_PATHS,
+            QueryDisplayConfig,
         },
         Foundation::{CloseHandle, FreeLibrary, GetLastError, HANDLE, HMODULE, HWND},
         Graphics::Gdi::MONITORINFOEXW,
         System::{
             LibraryLoader::{GetProcAddress, LoadLibraryW},
-            Registry::{RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_REG_SZ},
+            Registry::{HKEY_LOCAL_MACHINE, RRF_RT_REG_SZ, RegGetValueW},
             Threading::{OpenProcess, PROCESS_ACCESS_RIGHTS},
         },
         UI::WindowsAndMessaging::{GetWindowInfo, WINDOWINFO},
     },
+    core::{HRESULT, PCWSTR, s, w},
 };
 
-use crate::{error::XCapResult, XCapError};
+use crate::{XCapError, error::XCapResult};
 
 pub(super) fn get_build_number() -> u32 {
     unsafe {
@@ -247,8 +247,8 @@ pub fn get_window_info(hwnd: HWND) -> XCapResult<WINDOWINFO> {
 mod tests {
     use windows::Win32::Foundation::POINT;
     use windows::Win32::Graphics::Gdi::{
-        EnumDisplaySettingsW, GetMonitorInfoW, MonitorFromPoint, DEVMODEW, ENUM_CURRENT_SETTINGS,
-        MONITORINFO, MONITOR_DEFAULTTOPRIMARY,
+        DEVMODEW, ENUM_CURRENT_SETTINGS, EnumDisplaySettingsW, GetMonitorInfoW,
+        MONITOR_DEFAULTTOPRIMARY, MONITORINFO, MonitorFromPoint,
     };
     use windows::Win32::System::Threading::{
         GetCurrentProcessId, PROCESS_QUERY_LIMITED_INFORMATION,
@@ -321,31 +321,31 @@ mod tests {
         }
     }
 
-    unsafe fn get_monitor_info_ex_w() -> MONITORINFOEXW {
-        let point = POINT { x: 0, y: 0 };
-        let h_monitor = MonitorFromPoint(point, MONITOR_DEFAULTTOPRIMARY);
-        let mut monitor_info_ex_w = MONITORINFOEXW::default();
-        monitor_info_ex_w.monitorInfo.cbSize = mem::size_of::<MONITORINFOEXW>() as u32;
-        let monitor_info_ex_w_ptr =
-            &mut monitor_info_ex_w as *mut MONITORINFOEXW as *mut MONITORINFO;
+    fn get_monitor_info_ex_w() -> MONITORINFOEXW {
+        unsafe {
+            let point = POINT { x: 0, y: 0 };
+            let h_monitor = MonitorFromPoint(point, MONITOR_DEFAULTTOPRIMARY);
+            let mut monitor_info_ex_w = MONITORINFOEXW::default();
+            monitor_info_ex_w.monitorInfo.cbSize = mem::size_of::<MONITORINFOEXW>() as u32;
+            let monitor_info_ex_w_ptr =
+                &mut monitor_info_ex_w as *mut MONITORINFOEXW as *mut MONITORINFO;
 
-        // https://learn.microsoft.com/zh-cn/windows/win32/api/winuser/nf-winuser-getmonitorinfoa
-        GetMonitorInfoW(h_monitor, monitor_info_ex_w_ptr)
-            .ok()
-            .unwrap();
+            // https://learn.microsoft.com/zh-cn/windows/win32/api/winuser/nf-winuser-getmonitorinfoa
+            GetMonitorInfoW(h_monitor, monitor_info_ex_w_ptr)
+                .ok()
+                .unwrap();
 
-        monitor_info_ex_w
+            monitor_info_ex_w
+        }
     }
 
     #[test]
     fn test_get_monitor_config() {
-        unsafe {
-            let monitor_info_ex_w = get_monitor_info_ex_w();
-            // 获取显示器配置信息
-            let monitor_config = get_monitor_config(monitor_info_ex_w).unwrap();
+        let monitor_info_ex_w = get_monitor_info_ex_w();
+        // 获取显示器配置信息
+        let monitor_config = get_monitor_config(monitor_info_ex_w).unwrap();
 
-            assert!(!monitor_config.monitorFriendlyDeviceName.is_empty());
-        }
+        assert!(!monitor_config.monitorFriendlyDeviceName.is_empty());
     }
 
     #[test]

@@ -3,7 +3,7 @@ use std::ffi::c_void;
 use image::RgbaImage;
 use windows::Win32::Foundation::HWND;
 
-use crate::{error::XCapResult, platform::impl_window::ImplWindow, Monitor};
+use crate::{Monitor, error::XCapResult, platform::impl_window::ImplWindow};
 
 #[derive(Debug, Clone)]
 pub struct Window {

@@ -4,12 +4,11 @@ use std::{ffi::c_void, mem, ptr};
 use image::RgbaImage;
 use widestring::U16CString;
 use windows::{
-    core::{BOOL, HSTRING, PCWSTR},
     Win32::{
         Foundation::{GetLastError, HANDLE, HWND, LPARAM, MAX_PATH, RECT, TRUE},
         Graphics::{
-            Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED, DWMWA_EXTENDED_FRAME_BOUNDS},
-            Gdi::{IsRectEmpty, MonitorFromWindow, MONITOR_DEFAULTTONEAREST},
+            Dwm::{DWMWA_CLOAKED, DWMWA_EXTENDED_FRAME_BOUNDS, DwmGetWindowAttribute},
+            Gdi::{IsRectEmpty, MONITOR_DEFAULTTONEAREST, MonitorFromWindow},
         },
         Storage::FileSystem::{GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW},
         System::{
@@ -19,11 +18,12 @@ use windows::{
             },
         },
         UI::WindowsAndMessaging::{
-            EnumWindows, GetClassNameW, GetForegroundWindow, GetWindowLongPtrW,
+            EnumWindows, GWL_EXSTYLE, GetClassNameW, GetForegroundWindow, GetWindowLongPtrW,
             GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindow,
-            IsWindowVisible, IsZoomed, GWL_EXSTYLE, WINDOW_EX_STYLE, WS_EX_TOOLWINDOW,
+            IsWindowVisible, IsZoomed, WINDOW_EX_STYLE, WS_EX_TOOLWINDOW,
         },
     },
+    core::{BOOL, HSTRING, PCWSTR},
 };
 
 use crate::error::XCapResult;
@@ -38,6 +38,9 @@ use super::{
 pub(crate) struct ImplWindow {
     pub hwnd: HWND,
 }
+
+unsafe impl Send for ImplWindow {}
+unsafe impl Sync for ImplWindow {}
 
 fn is_window_cloaked(hwnd: HWND) -> bool {
     unsafe {
@@ -151,22 +154,26 @@ fn is_valid_window(hwnd: HWND) -> bool {
     true
 }
 
-unsafe extern "system" fn enum_valid_windows(hwnd: HWND, state: LPARAM) -> BOOL {
-    let state = Box::leak(Box::from_raw(state.0 as *mut Vec<HWND>));
+extern "system" fn enum_valid_windows(hwnd: HWND, state: LPARAM) -> BOOL {
+    unsafe {
+        let state = Box::leak(Box::from_raw(state.0 as *mut Vec<HWND>));
 
-    if is_valid_window(hwnd) {
-        state.push(hwnd);
+        if is_valid_window(hwnd) {
+            state.push(hwnd);
+        }
+
+        TRUE
     }
-
-    TRUE
 }
 
-unsafe extern "system" fn enum_all_windows(hwnd: HWND, state: LPARAM) -> BOOL {
-    let state = Box::leak(Box::from_raw(state.0 as *mut Vec<HWND>));
+extern "system" fn enum_all_windows(hwnd: HWND, state: LPARAM) -> BOOL {
+    unsafe {
+        let state = Box::leak(Box::from_raw(state.0 as *mut Vec<HWND>));
 
-    state.push(hwnd);
+        state.push(hwnd);
 
-    TRUE
+        TRUE
+    }
 }
 
 fn get_window_title(hwnd: HWND) -> XCapResult<String> {

@@ -8,6 +8,8 @@ pub enum XCapError {
     Error(String),
     #[error("StdSyncPoisonError {0}")]
     StdSyncPoisonError(String),
+    #[error("Invalid capture region: {0}")]
+    InvalidCaptureRegion(String),
 
     #[cfg(target_os = "linux")]
     #[error(transparent)]
@@ -32,7 +34,7 @@ pub enum XCapError {
     StdTimeSystemTimeError(#[from] std::time::SystemTimeError),
     #[cfg(target_os = "linux")]
     #[error(transparent)]
-    LibwayshotError(#[from] libwayshot::Error),
+    LibwayshotError(#[from] libwayshot_xcap::Error),
     #[cfg(target_os = "linux")]
     #[error(transparent)]
     UrlParseError(#[from] url::ParseError),
