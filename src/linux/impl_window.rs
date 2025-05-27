@@ -328,4 +328,8 @@ impl ImplWindow {
     pub fn capture_image(&self) -> XCapResult<RgbaImage> {
         capture_window(self)
     }
+
+    pub fn hwnd(&self) -> XCapResult<*mut c_void> {
+        return None;
+    }
 }

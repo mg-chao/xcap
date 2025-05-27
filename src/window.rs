@@ -1,4 +1,7 @@
+use std::ffi::c_void;
+
 use image::RgbaImage;
+use windows::Win32::Foundation::HWND;
 
 use crate::{Monitor, error::XCapResult, platform::impl_window::ImplWindow};
 
@@ -77,6 +80,10 @@ impl Window {
     /// The window is focused.
     pub fn is_focused(&self) -> XCapResult<bool> {
         self.impl_window.is_focused()
+    }
+
+    pub fn hwnd(&self) -> XCapResult<*mut c_void> {
+        self.impl_window.hwnd()
     }
 }
 
