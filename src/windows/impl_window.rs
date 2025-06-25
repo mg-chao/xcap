@@ -112,15 +112,16 @@ fn is_valid_window(hwnd: HWND) -> bool {
         // windows owned by the current process. Consumers should either ensure that
         // the thread running their message loop never waits on this operation, or use
         // the option to exclude these windows from the source list.
-        let lp_dw_process_id = get_window_pid(hwnd);
-        if lp_dw_process_id == GetCurrentProcessId() {
-            return false;
-        }
+        // let lp_dw_process_id = get_window_pid(hwnd);
+        // if lp_dw_process_id == GetCurrentProcessId() {
+        //     return false;
+        // }
 
         // Skip Program Manager window.
-        if class_name.eq("Progman") {
-            return false;
-        }
+        // if class_name.eq("Progman") {
+        //     return false;
+        // }
+
         // Skip Start button window on Windows Vista, Windows 7.
         // On Windows 8, Windows 8.1, Windows 10 Start button is not a top level
         // window, so it will not be examined here.
@@ -438,8 +439,6 @@ impl ImplWindow {
     }
 
     pub fn hwnd(&self) -> XCapResult<*mut c_void> {
-        return XCapResult::Ok(self.hwnd.0)
+        return XCapResult::Ok(self.hwnd.0);
     }
 }
-
-
