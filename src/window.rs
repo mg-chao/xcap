@@ -11,7 +11,7 @@ pub struct Window {
 }
 
 impl Window {
-    pub(crate) fn new(impl_window: ImplWindow) -> Window {
+    pub fn new(impl_window: ImplWindow) -> Window {
         Window { impl_window }
     }
 }

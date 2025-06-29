@@ -19,6 +19,7 @@ pub use image;
 
 pub use error::{XCapError, XCapResult};
 pub use monitor::Monitor;
+pub use platform::impl_window::ImplWindow;
 pub use window::Window;
 
 pub use video_recorder::Frame;

@@ -35,7 +35,7 @@ use super::{
 };
 
 #[derive(Debug, Clone)]
-pub(crate) struct ImplWindow {
+pub struct ImplWindow {
     pub hwnd: HWND,
 }
 
@@ -320,7 +320,7 @@ fn get_app_name(pid: u32) -> XCapResult<String> {
 }
 
 impl ImplWindow {
-    fn new(hwnd: HWND) -> ImplWindow {
+    pub fn new(hwnd: HWND) -> ImplWindow {
         ImplWindow { hwnd }
     }
 
