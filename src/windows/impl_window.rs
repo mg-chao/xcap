@@ -35,7 +35,7 @@ use super::{
 };
 
 #[derive(Debug, Clone)]
-pub(crate) struct ImplWindow {
+pub struct ImplWindow {
     pub hwnd: HWND,
 }
 
