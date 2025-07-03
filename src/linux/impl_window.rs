@@ -17,7 +17,7 @@ use super::{
 };
 
 #[derive(Debug, Clone)]
-pub(crate) struct ImplWindow {
+pub struct ImplWindow {
     pub window: Window,
 }
 
@@ -123,7 +123,7 @@ fn get_window_state(window: &Window) -> XCapResult<(bool, bool)> {
 }
 
 impl ImplWindow {
-    fn new(window: Window) -> ImplWindow {
+    pub fn new(window: Window) -> ImplWindow {
         ImplWindow { window }
     }
 
@@ -329,6 +329,7 @@ impl ImplWindow {
         capture_window(self)
     }
 
+    #[cfg(target_os = "windows")]
     pub fn hwnd(&self) -> XCapResult<*mut c_void> {
         return None;
     }
