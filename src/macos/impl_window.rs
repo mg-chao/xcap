@@ -16,7 +16,7 @@ use crate::{XCapError, error::XCapResult};
 use super::{capture::capture, impl_monitor::ImplMonitor};
 
 #[derive(Debug, Clone)]
-pub(crate) struct ImplWindow {
+pub struct ImplWindow {
     pub window_id: u32,
 }
 
@@ -378,6 +378,7 @@ impl ImplWindow {
         )
     }
 
+    #[cfg(target_os = "windows")]
     pub fn hwnd(&self) -> XCapResult<*mut c_void> {
         return None;
     }
