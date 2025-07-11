@@ -99,6 +99,13 @@ impl Monitor {
     }
 }
 
+#[cfg(target_os = "macos")]
+impl Monitor {
+    pub fn display_id(&self) -> XCapResult<u32> {
+        self.impl_monitor.display_id()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::XCapError;

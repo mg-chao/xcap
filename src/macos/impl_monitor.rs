@@ -240,4 +240,9 @@ impl ImplMonitor {
     pub fn video_recorder(&self) -> XCapResult<(ImplVideoRecorder, Receiver<Frame>)> {
         ImplVideoRecorder::new(self.cg_direct_display_id)
     }
+
+    #[cfg(target_os = "macos")]
+    pub fn display_id(&self) -> XCapResult<u32> {
+        Ok(self.cg_direct_display_id)
+    }
 }
