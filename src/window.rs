@@ -93,6 +93,15 @@ impl Window {
     }
 }
 
+#[cfg(target_os = "macos")]
+use objc2_core_foundation::{CFDictionary, CFRetained};
+#[cfg(target_os = "macos")]
+impl Window {
+    pub fn window_cf_dictionary(&self) -> XCapResult<CFRetained<CFDictionary>> {
+        self.impl_window.window_cf_dictionary()
+    }
+}
+
 impl Window {
     pub fn capture_image(&self) -> XCapResult<RgbaImage> {
         self.impl_window.capture_image()

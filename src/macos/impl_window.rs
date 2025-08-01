@@ -43,7 +43,7 @@ fn get_cf_dictionary_get_value(
     }
 }
 
-fn get_cf_number_i32_value(cf_dictionary: &CFDictionary, key: &str) -> XCapResult<i32> {
+pub fn get_cf_number_i32_value(cf_dictionary: &CFDictionary, key: &str) -> XCapResult<i32> {
     unsafe {
         let cf_number = get_cf_dictionary_get_value(cf_dictionary, key)? as *const CFNumber;
 
@@ -62,19 +62,19 @@ fn get_cf_number_i32_value(cf_dictionary: &CFDictionary, key: &str) -> XCapResul
     }
 }
 
-fn get_cf_string_value(cf_dictionary: &CFDictionary, key: &str) -> XCapResult<String> {
+pub fn get_cf_string_value(cf_dictionary: &CFDictionary, key: &str) -> XCapResult<String> {
     let value_ref = get_cf_dictionary_get_value(cf_dictionary, key)? as *const CFString;
     let value = unsafe { (*value_ref).to_string() };
     Ok(value)
 }
 
-fn get_cf_bool_value(cf_dictionary: &CFDictionary, key: &str) -> XCapResult<bool> {
+pub fn get_cf_bool_value(cf_dictionary: &CFDictionary, key: &str) -> XCapResult<bool> {
     let value_ref = get_cf_dictionary_get_value(cf_dictionary, key)? as *const CFBoolean;
 
     Ok(unsafe { (*value_ref).value() })
 }
 
-fn get_window_cg_rect(window_cf_dictionary: &CFDictionary) -> XCapResult<CGRect> {
+pub fn get_window_cg_rect(window_cf_dictionary: &CFDictionary) -> XCapResult<CGRect> {
     unsafe {
         let window_bounds = get_cf_dictionary_get_value(window_cf_dictionary, "kCGWindowBounds")?
             as *const CFDictionary;
@@ -94,7 +94,7 @@ fn get_window_cg_rect(window_cf_dictionary: &CFDictionary) -> XCapResult<CGRect>
     }
 }
 
-fn get_window_id(window_cf_dictionary: &CFDictionary) -> XCapResult<u32> {
+pub fn get_window_id(window_cf_dictionary: &CFDictionary) -> XCapResult<u32> {
     let window_name = get_cf_string_value(window_cf_dictionary, "kCGWindowName")?;
 
     let window_owner_name = get_cf_string_value(window_cf_dictionary, "kCGWindowOwnerName")?;
@@ -214,10 +214,46 @@ impl ImplWindow {
         get_cf_string_value(window_cf_dictionary.as_ref(), "kCGWindowOwnerName")
     }
 
-    pub fn title(&self) -> XCapResult<String> {
-        let window_cf_dictionary = get_window_cf_dictionary(self.window_id)?;
+    pub fn window_cf_dictionary(&self) -> XCapResult<CFRetained<CFDictionary>> {
+        get_window_cf_dictionary(self.window_id)
+    }
 
-        get_cf_string_value(window_cf_dictionary.as_ref(), "kCGWindowName")
+    pub fn title(&self) -> XCapResult<String> {
+        let window_cf_dictionary = self.window_cf_dictionary()?;
+
+        Self::title_by_cf_dictionary(window_cf_dictionary.as_ref())
+    }
+
+    pub fn title_by_cf_dictionary(window_cf_dictionary: &CFDictionary) -> XCapResult<String> {
+        get_cf_string_value(window_cf_dictionary, "kCGWindowName")
+    }
+
+    pub fn current_monitor_by_cf_dictionary(
+        window_cf_dictionary: &CFDictionary,
+    ) -> XCapResult<ImplMonitor> {
+        let cg_rect = get_window_cg_rect(window_cf_dictionary.as_ref())?;
+
+        // 获取窗口中心点的坐标
+        let window_center_x = cg_rect.origin.x + cg_rect.size.width / 2.0;
+        let window_center_y = cg_rect.origin.y + cg_rect.size.height / 2.0;
+        let cg_point = CGPoint {
+            x: window_center_x,
+            y: window_center_y,
+        };
+
+        let impl_monitors = ImplMonitor::all()?;
+        let primary_monitor = ImplMonitor::new(unsafe { CGMainDisplayID() });
+
+        let impl_monitor = impl_monitors
+            .iter()
+            .find(|impl_monitor| unsafe {
+                let display_bounds = CGDisplayBounds(impl_monitor.cg_direct_display_id);
+                CGRectContainsPoint(display_bounds, cg_point)
+                    || CGRectIntersectsRect(display_bounds, cg_rect)
+            })
+            .unwrap_or(&primary_monitor);
+
+        Ok(impl_monitor.to_owned())
     }
 
     pub fn current_monitor(&self) -> XCapResult<ImplMonitor> {
@@ -247,20 +283,25 @@ impl ImplWindow {
         Ok(impl_monitor.to_owned())
     }
 
-    pub fn x(&self) -> XCapResult<i32> {
-        let window_cf_dictionary = get_window_cf_dictionary(self.window_id)?;
-
-        let cg_rect = get_window_cg_rect(window_cf_dictionary.as_ref())?;
-
+    pub fn x_by_cf_dictionary(window_cf_dictionary: &CFDictionary) -> XCapResult<i32> {
+        let cg_rect = get_window_cg_rect(window_cf_dictionary)?;
         Ok(cg_rect.origin.x as i32)
     }
 
-    pub fn y(&self) -> XCapResult<i32> {
-        let window_cf_dictionary = get_window_cf_dictionary(self.window_id)?;
+    pub fn x(&self) -> XCapResult<i32> {
+        let window_cf_dictionary = self.window_cf_dictionary()?;
+        Self::x_by_cf_dictionary(window_cf_dictionary.as_ref())
+    }
 
-        let cg_rect = get_window_cg_rect(window_cf_dictionary.as_ref())?;
-
+    pub fn y_by_cf_dictionary(window_cf_dictionary: &CFDictionary) -> XCapResult<i32> {
+        let cg_rect = get_window_cg_rect(window_cf_dictionary)?;
         Ok(cg_rect.origin.y as i32)
+    }
+
+    pub fn y(&self) -> XCapResult<i32> {
+        let window_cf_dictionary = self.window_cf_dictionary()?;
+
+        Self::y_by_cf_dictionary(window_cf_dictionary.as_ref())
     }
 
     pub fn z(&self) -> XCapResult<i32> {
@@ -302,12 +343,22 @@ impl ImplWindow {
         }
     }
 
+    pub fn width_by_cf_dictionary(window_cf_dictionary: &CFDictionary) -> XCapResult<u32> {
+        let cg_rect = get_window_cg_rect(window_cf_dictionary)?;
+        Ok(cg_rect.size.width as u32)
+    }
+
     pub fn width(&self) -> XCapResult<u32> {
         let window_cf_dictionary = get_window_cf_dictionary(self.window_id)?;
 
         let cg_rect = get_window_cg_rect(window_cf_dictionary.as_ref())?;
 
         Ok(cg_rect.size.width as u32)
+    }
+
+    pub fn height_by_cf_dictionary(window_cf_dictionary: &CFDictionary) -> XCapResult<u32> {
+        let cg_rect = get_window_cg_rect(window_cf_dictionary)?;
+        Ok(cg_rect.size.height as u32)
     }
 
     pub fn height(&self) -> XCapResult<u32> {
@@ -318,12 +369,37 @@ impl ImplWindow {
         Ok(cg_rect.size.height as u32)
     }
 
+    pub fn cg_rect_by_cf_dictionary(window_cf_dictionary: &CFDictionary) -> XCapResult<CGRect> {
+        get_window_cg_rect(window_cf_dictionary)
+    }
+
+    pub fn is_minimized_by_cf_dictionary(window_cf_dictionary: &CFDictionary) -> XCapResult<bool> {
+        let is_on_screen = get_cf_bool_value(window_cf_dictionary.as_ref(), "kCGWindowIsOnscreen")?;
+        let is_maximized = Self::is_maximized_by_cf_dictionary(window_cf_dictionary.as_ref())?;
+
+        Ok(!is_on_screen && !is_maximized)
+    }
+
     pub fn is_minimized(&self) -> XCapResult<bool> {
         let window_cf_dictionary = get_window_cf_dictionary(self.window_id)?;
         let is_on_screen = get_cf_bool_value(window_cf_dictionary.as_ref(), "kCGWindowIsOnscreen")?;
         let is_maximized = self.is_maximized()?;
 
         Ok(!is_on_screen && !is_maximized)
+    }
+
+    pub fn is_maximized_by_cf_dictionary(window_cf_dictionary: &CFDictionary) -> XCapResult<bool> {
+        let cg_rect = get_window_cg_rect(window_cf_dictionary.as_ref())?;
+        let impl_monitor = Self::current_monitor_by_cf_dictionary(window_cf_dictionary.as_ref())?;
+        let impl_monitor_width = impl_monitor.width()?;
+        let impl_monitor_height = impl_monitor.height()?;
+
+        let is_maximized = {
+            cg_rect.size.width as u32 >= impl_monitor_width
+                && cg_rect.size.height as u32 >= impl_monitor_height
+        };
+
+        Ok(is_maximized)
     }
 
     pub fn is_maximized(&self) -> XCapResult<bool> {
