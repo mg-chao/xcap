@@ -19,7 +19,7 @@ use crate::{
 use super::{capture::capture, impl_video_recorder::ImplVideoRecorder};
 
 #[derive(Debug, Clone)]
-pub(crate) struct ImplMonitor {
+pub struct ImplMonitor {
     pub cg_direct_display_id: CGDirectDisplayID,
 }
 
@@ -221,23 +221,26 @@ impl ImplMonitor {
         }
 
         // Create a CGRect for the region to capture
-        unsafe {
-            let cg_rect = objc2_core_foundation::CGRect {
-                origin: objc2_core_foundation::CGPoint {
-                    x: (monitor_x + x as i32) as f64,
-                    y: (monitor_y + y as i32) as f64,
-                },
-                size: objc2_core_foundation::CGSize {
-                    width: width as f64,
-                    height: height as f64,
-                },
-            };
+        let cg_rect = objc2_core_foundation::CGRect {
+            origin: objc2_core_foundation::CGPoint {
+                x: (monitor_x + x as i32) as f64,
+                y: (monitor_y + y as i32) as f64,
+            },
+            size: objc2_core_foundation::CGSize {
+                width: width as f64,
+                height: height as f64,
+            },
+        };
 
-            capture(cg_rect, CGWindowListOption::OptionAll, 0)
-        }
+        capture(cg_rect, CGWindowListOption::OptionAll, 0)
     }
 
     pub fn video_recorder(&self) -> XCapResult<(ImplVideoRecorder, Receiver<Frame>)> {
         ImplVideoRecorder::new(self.cg_direct_display_id)
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn display_id(&self) -> XCapResult<u32> {
+        Ok(self.cg_direct_display_id)
     }
 }
