@@ -34,7 +34,7 @@ use super::{
 // https://learn.microsoft.com/zh-cn/windows/win32/learnwin32/working-with-strings
 
 #[derive(Debug, Clone)]
-pub(crate) struct ImplMonitor {
+pub struct ImplMonitor {
     pub h_monitor: HMONITOR,
 }
 
@@ -209,6 +209,10 @@ impl ImplMonitor {
         }
 
         Ok(name)
+    }
+
+    pub fn get_dev_mode_w(&self) -> XCapResult<DEVMODEW> {
+        get_dev_mode_w(self.h_monitor)
     }
 
     pub fn x(&self) -> XCapResult<i32> {

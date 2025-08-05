@@ -11,6 +11,9 @@ pub struct Monitor {
     pub(crate) impl_monitor: ImplMonitor,
 }
 
+unsafe impl Send for Monitor {}
+unsafe impl Sync for Monitor {}
+
 impl Monitor {
     pub(crate) fn new(impl_monitor: ImplMonitor) -> Monitor {
         Monitor { impl_monitor }
@@ -96,6 +99,11 @@ impl Monitor {
         let (impl_video_recorder, sx) = self.impl_monitor.video_recorder()?;
 
         Ok((VideoRecorder::new(impl_video_recorder), sx))
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn get_dev_mode_w(&self) -> XCapResult<windows::Win32::Graphics::Gdi::DEVMODEW> {
+        self.impl_monitor.get_dev_mode_w()
     }
 }
 
