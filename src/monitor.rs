@@ -112,6 +112,10 @@ impl Monitor {
     pub fn display_id(&self) -> XCapResult<u32> {
         self.impl_monitor.display_id()
     }
+
+    pub fn bounds(&self) -> XCapResult<objc2_core_foundation::CGRect> {
+        self.impl_monitor.bounds()
+    }
 }
 
 #[cfg(test)]
