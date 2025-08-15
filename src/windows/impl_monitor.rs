@@ -275,25 +275,34 @@ impl ImplMonitor {
         Ok(config.outputTechnology == DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL)
     }
 
-    pub fn capture_image(&self) -> XCapResult<RgbaImage> {
+    fn capture_image_core(&self, is_rgb: bool) -> XCapResult<(i32, i32, i32, i32)> {
         let x = self.x()?;
         let y = self.y()?;
-        let width = self.width()?;
-        let height = self.height()?;
+        let width = self.width()? as i32;
+        let height = self.height()? as i32;
 
-        capture_monitor(x, y, width as i32, height as i32)
+        Ok((x, y, width, height))
+    }
+
+    pub fn capture_image(&self) -> XCapResult<RgbaImage> {
+        let (x, y, width, height) = self.capture_image_core(false)?;
+
+        capture_monitor(x, y, width, height)
     }
 
     pub fn capture_image_rgb(&self) -> XCapResult<RgbImage> {
-        let x = self.x()?;
-        let y = self.y()?;
-        let width = self.width()?;
-        let height = self.height()?;
+        let (x, y, width, height) = self.capture_image_core(true)?;
 
-        capture_monitor_rgb(x, y, width as i32, height as i32)
+        capture_monitor_rgb(x, y, width, height)
     }
 
-    pub fn capture_region(&self, x: u32, y: u32, width: u32, height: u32) -> XCapResult<RgbaImage> {
+    fn capture_region_core(
+        &self,
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    ) -> XCapResult<(i32, i32, i32, i32)> {
         // Validate region bounds
         let monitor_x = self.x()?;
         let monitor_y = self.y()?;
@@ -315,7 +324,18 @@ impl ImplMonitor {
         let abs_x = monitor_x + x as i32;
         let abs_y = monitor_y + y as i32;
 
-        capture_monitor(abs_x, abs_y, width as i32, height as i32)
+        Ok((abs_x, abs_y, width as i32, height as i32))
+    }
+
+    pub fn capture_region(&self, x: u32, y: u32, width: u32, height: u32) -> XCapResult<RgbaImage> {
+        let (x, y, width, height) = self.capture_region_core(x, y, width, height)?;
+
+        capture_monitor(x, y, width, height)
+    }
+
+    pub fn capture_region_rgb(&self, x: u32, y: u32, width: u32, height: u32) -> XCapResult<RgbImage> {
+        let (x, y, width, height) = self.capture_region_core(x, y, width, height)?;
+        capture_monitor_rgb(x, y, width, height)
     }
 
     pub fn video_recorder(&self) -> XCapResult<(ImplVideoRecorder, Receiver<Frame>)> {
