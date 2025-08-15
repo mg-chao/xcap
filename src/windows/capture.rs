@@ -1,6 +1,6 @@
 use std::{ffi::c_void, mem};
 
-use image::{DynamicImage, RgbaImage};
+use image::{DynamicImage, RgbImage, RgbaImage};
 use scopeguard::guard;
 use windows::Win32::{
     Foundation::{GetLastError, HWND},
@@ -17,16 +17,19 @@ use windows::Win32::{
     UI::WindowsAndMessaging::GetDesktopWindow,
 };
 
-use crate::error::{XCapError, XCapResult};
+use crate::{
+    error::{XCapError, XCapResult},
+    platform::utils::bgra_to_rgb_image,
+};
 
 use super::utils::{bgra_to_rgba_image, get_os_major_version, get_window_info};
 
-fn to_rgba_image(
+fn to_rgba_image_core(
     hdc_mem: HDC,
     h_bitmap: HBITMAP,
     width: i32,
     height: i32,
-) -> XCapResult<RgbaImage> {
+) -> XCapResult<Vec<u8>> {
     let buffer_size = width * height * 4;
     let mut bitmap_info = BITMAPINFO {
         bmiHeader: BITMAPINFOHEADER {
@@ -61,7 +64,22 @@ fn to_rgba_image(
         }
     };
 
-    bgra_to_rgba_image(width as u32, height as u32, buffer)
+    Ok(buffer)
+}
+
+fn to_rgba_image(
+    hdc_mem: HDC,
+    h_bitmap: HBITMAP,
+    width: i32,
+    height: i32,
+) -> XCapResult<RgbaImage> {
+    let buffer = to_rgba_image_core(hdc_mem, h_bitmap, width, height)?;
+    Ok(bgra_to_rgba_image(width as u32, height as u32, buffer)?)
+}
+
+fn to_rgb_image(hdc_mem: HDC, h_bitmap: HBITMAP, width: i32, height: i32) -> XCapResult<RgbImage> {
+    let buffer = to_rgba_image_core(hdc_mem, h_bitmap, width, height)?;
+    Ok(bgra_to_rgb_image(width as u32, height as u32, &buffer)?)
 }
 
 fn delete_bitmap_object(val: HBITMAP) {
@@ -75,7 +93,12 @@ fn delete_bitmap_object(val: HBITMAP) {
 }
 
 #[allow(unused)]
-pub fn capture_monitor(x: i32, y: i32, width: i32, height: i32) -> XCapResult<RgbaImage> {
+pub fn capture_monitor_core(
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+) -> XCapResult<(HDC, HBITMAP, i32, i32)> {
     unsafe {
         let hwnd = GetDesktopWindow();
         let scope_guard_hdc_desktop_window = guard(GetWindowDC(Some(hwnd)), |val| {
@@ -118,7 +141,25 @@ pub fn capture_monitor(x: i32, y: i32, width: i32, height: i32) -> XCapResult<Rg
             SRCCOPY,
         )?;
 
-        to_rgba_image(*scope_guard_mem, *scope_guard_h_bitmap, width, height)
+        Ok((*scope_guard_mem, *scope_guard_h_bitmap, width, height))
+    }
+}
+
+#[allow(unused)]
+pub fn capture_monitor(x: i32, y: i32, width: i32, height: i32) -> XCapResult<RgbaImage> {
+    unsafe {
+        let (hdc_mem, h_bitmap, width, height) = capture_monitor_core(x, y, width, height)?;
+
+        to_rgba_image(hdc_mem, h_bitmap, width, height)
+    }
+}
+
+#[allow(unused)]
+pub fn capture_monitor_rgb(x: i32, y: i32, width: i32, height: i32) -> XCapResult<RgbImage> {
+    unsafe {
+        let (hdc_mem, h_bitmap, width, height) = capture_monitor_core(x, y, width, height)?;
+
+        to_rgb_image(hdc_mem, h_bitmap, width, height)
     }
 }
 

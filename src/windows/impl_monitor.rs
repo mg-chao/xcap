@@ -1,6 +1,6 @@
 use std::{mem, ptr, sync::mpsc::Receiver};
 
-use image::RgbaImage;
+use image::{RgbImage, RgbaImage};
 use scopeguard::guard;
 use widestring::U16CString;
 use windows::{
@@ -21,6 +21,7 @@ use windows::{
 
 use crate::{
     error::{XCapError, XCapResult},
+    platform::capture::capture_monitor_rgb,
     video_recorder::Frame,
 };
 
@@ -281,6 +282,15 @@ impl ImplMonitor {
         let height = self.height()?;
 
         capture_monitor(x, y, width as i32, height as i32)
+    }
+
+    pub fn capture_image_rgb(&self) -> XCapResult<RgbImage> {
+        let x = self.x()?;
+        let y = self.y()?;
+        let width = self.width()?;
+        let height = self.height()?;
+
+        capture_monitor_rgb(x, y, width as i32, height as i32)
     }
 
     pub fn capture_region(&self, x: u32, y: u32, width: u32, height: u32) -> XCapResult<RgbaImage> {

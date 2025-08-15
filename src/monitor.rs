@@ -1,5 +1,7 @@
 use std::sync::mpsc::Receiver;
 
+#[cfg(target_os = "windows")]
+use image::RgbImage;
 use image::RgbaImage;
 
 use crate::{
@@ -104,6 +106,11 @@ impl Monitor {
     #[cfg(target_os = "windows")]
     pub fn get_dev_mode_w(&self) -> XCapResult<windows::Win32::Graphics::Gdi::DEVMODEW> {
         self.impl_monitor.get_dev_mode_w()
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn capture_image_rgb(&self) -> XCapResult<RgbImage> {
+        self.impl_monitor.capture_image_rgb()
     }
 }
 
