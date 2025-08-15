@@ -112,6 +112,11 @@ impl Monitor {
     pub fn capture_image_rgb(&self) -> XCapResult<RgbImage> {
         self.impl_monitor.capture_image_rgb()
     }
+
+    #[cfg(target_os = "windows")]
+    pub fn capture_region_rgb(&self, x: u32, y: u32, width: u32, height: u32) -> XCapResult<RgbImage> {
+        self.impl_monitor.capture_region_rgb(x, y, width, height)
+    }
 }
 
 #[cfg(target_os = "macos")]
