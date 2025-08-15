@@ -1,7 +1,7 @@
 use std::{ffi::c_void, mem};
 
 use image::{DynamicImage, RgbImage, RgbaImage};
-use scopeguard::guard;
+use scopeguard::{guard, ScopeGuard};
 use windows::Win32::{
     Foundation::{GetLastError, HWND},
     Graphics::{
@@ -98,7 +98,10 @@ pub fn capture_monitor_core(
     y: i32,
     width: i32,
     height: i32,
-) -> XCapResult<(HDC, HBITMAP, i32, i32)> {
+) -> XCapResult<(
+    ScopeGuard<HDC, impl FnOnce(HDC)>,
+    ScopeGuard<HBITMAP, impl FnOnce(HBITMAP)>,
+)> {
     unsafe {
         let hwnd = GetDesktopWindow();
         let scope_guard_hdc_desktop_window = guard(GetWindowDC(Some(hwnd)), |val| {
@@ -141,25 +144,25 @@ pub fn capture_monitor_core(
             SRCCOPY,
         )?;
 
-        Ok((*scope_guard_mem, *scope_guard_h_bitmap, width, height))
+        Ok((scope_guard_mem, scope_guard_h_bitmap))
     }
 }
 
 #[allow(unused)]
 pub fn capture_monitor(x: i32, y: i32, width: i32, height: i32) -> XCapResult<RgbaImage> {
     unsafe {
-        let (hdc_mem, h_bitmap, width, height) = capture_monitor_core(x, y, width, height)?;
+        let (hdc_mem, h_bitmap) = capture_monitor_core(x, y, width, height)?;
 
-        to_rgba_image(hdc_mem, h_bitmap, width, height)
+        to_rgba_image(*hdc_mem, *h_bitmap, width, height)
     }
 }
 
 #[allow(unused)]
 pub fn capture_monitor_rgb(x: i32, y: i32, width: i32, height: i32) -> XCapResult<RgbImage> {
     unsafe {
-        let (hdc_mem, h_bitmap, width, height) = capture_monitor_core(x, y, width, height)?;
+        let (hdc_mem, h_bitmap) = capture_monitor_core(x, y, width, height)?;
 
-        to_rgb_image(hdc_mem, h_bitmap, width, height)
+        to_rgb_image(*hdc_mem, *h_bitmap, width, height)
     }
 }
 
