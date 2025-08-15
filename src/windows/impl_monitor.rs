@@ -275,7 +275,7 @@ impl ImplMonitor {
         Ok(config.outputTechnology == DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL)
     }
 
-    fn capture_image_core(&self, is_rgb: bool) -> XCapResult<(i32, i32, i32, i32)> {
+    fn capture_image_core(&self) -> XCapResult<(i32, i32, i32, i32)> {
         let x = self.x()?;
         let y = self.y()?;
         let width = self.width()? as i32;
@@ -285,13 +285,13 @@ impl ImplMonitor {
     }
 
     pub fn capture_image(&self) -> XCapResult<RgbaImage> {
-        let (x, y, width, height) = self.capture_image_core(false)?;
+        let (x, y, width, height) = self.capture_image_core()?;
 
         capture_monitor(x, y, width, height)
     }
 
     pub fn capture_image_rgb(&self) -> XCapResult<RgbImage> {
-        let (x, y, width, height) = self.capture_image_core(true)?;
+        let (x, y, width, height) = self.capture_image_core()?;
 
         capture_monitor_rgb(x, y, width, height)
     }

@@ -268,11 +268,24 @@ mod tests {
 
     #[test]
     fn test_capture_monitor() {
-        let result = capture_monitor(0, 0, 100, 100);
+        let start_ts = std::time::Instant::now();
+        let result = capture_monitor(0, 0, 3840, 2160);
+        println!("capture_monitor time: {:?}", start_ts.elapsed());
         assert!(result.is_ok());
         let image = result.unwrap();
-        assert_eq!(image.width(), 100);
-        assert_eq!(image.height(), 100);
+        assert_eq!(image.width(), 3840);
+        assert_eq!(image.height(), 2160);
+    }
+
+    #[test]
+    fn test_capture_monitor_rgb() {
+        let start_ts = std::time::Instant::now();
+        let result = capture_monitor_rgb(0, 0, 3840, 2160);
+        println!("capture_monitor_rgb time: {:?}", start_ts.elapsed());
+        assert!(result.is_ok());
+        let image = result.unwrap();
+        assert_eq!(image.width(), 3840);
+        assert_eq!(image.height(), 2160);
     }
 
     #[test]

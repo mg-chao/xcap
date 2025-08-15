@@ -97,7 +97,7 @@ pub(super) fn bgra_to_rgb(bgra_data: &[u8]) -> Vec<u8> {
             let rgb_base = i * 3;
 
             *rgb_ptr.add(rgb_base) = *bgra_ptr.add(bgra_base + 2); // R
-            *rgb_ptr.add(rgb_base + 1) = *bgra_ptr.add(bgra_base + 1); // G  
+            *rgb_ptr.add(rgb_base + 1) = *bgra_ptr.add(bgra_base + 1); // G
             *rgb_ptr.add(rgb_base + 2) = *bgra_ptr.add(bgra_base); // B
         }
     }
