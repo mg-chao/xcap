@@ -54,6 +54,7 @@ windows = { version = "0.61", features = [
     "Win32_Graphics_Direct3D11",
     "Win32_Graphics_Dxgi_Common",
 ] }
+rayon = "1.11.0"
 
 [target.'cfg(target_os="linux")'.dependencies]
 url = "2.5"

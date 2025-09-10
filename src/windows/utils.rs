@@ -1,6 +1,7 @@
 use std::mem;
 
 use image::{RgbImage, RgbaImage};
+use rayon::prelude::*;
 use scopeguard::{ScopeGuard, guard};
 use widestring::U16CString;
 use windows::{
@@ -89,17 +90,21 @@ pub(super) fn bgra_to_rgb(bgra_data: &[u8]) -> Vec<u8> {
     unsafe {
         rgb_data.set_len(pixel_count * 3);
 
-        let bgra_ptr = bgra_data.as_ptr();
-        let rgb_ptr: *mut u8 = rgb_data.as_mut_ptr();
+        let bgra_ptr = bgra_data.as_ptr() as usize;
+        let rgb_ptr = rgb_data.as_mut_ptr() as usize;
 
-        for i in 0..pixel_count {
+        // 多线程可能提高，先保留
+        (0..pixel_count).into_par_iter().for_each(|i| {
+            let bgra_ptr = bgra_ptr as *const u8;
+            let rgb_ptr = rgb_ptr as *mut u8;
+
             let bgra_base = i * 4;
             let rgb_base = i * 3;
 
             *rgb_ptr.add(rgb_base) = *bgra_ptr.add(bgra_base + 2); // R
             *rgb_ptr.add(rgb_base + 1) = *bgra_ptr.add(bgra_base + 1); // G
             *rgb_ptr.add(rgb_base + 2) = *bgra_ptr.add(bgra_base); // B
-        }
+        });
     }
 
     rgb_data
