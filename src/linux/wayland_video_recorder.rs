@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fmt,
     io::Cursor,
     sync::{
         Arc,
@@ -10,6 +11,7 @@ use std::{
 };
 
 use pipewire::{
+    channel,
     context::Context,
     keys::{MEDIA_CATEGORY, MEDIA_ROLE, MEDIA_TYPE},
     main_loop::MainLoop,
@@ -26,10 +28,9 @@ use pipewire::{
     },
     stream::{Stream, StreamFlags},
 };
-use serde::Deserialize;
 use zbus::{
     blocking::Proxy,
-    zvariant::{OwnedFd, OwnedObjectPath, Type, Value},
+    zvariant::{DeserializeDict, OwnedFd, OwnedObjectPath, Type, Value},
 };
 
 use crate::{XCapError, XCapResult, video_recorder::Frame};
@@ -40,7 +41,7 @@ use super::{
 };
 
 #[allow(dead_code)]
-#[derive(Deserialize, Type, Debug)]
+#[derive(DeserializeDict, Type, Debug)]
 #[zvariant(signature = "dict")]
 pub struct ScreenCastStartStream {
     pub id: Option<String>,
@@ -50,7 +51,7 @@ pub struct ScreenCastStartStream {
     pub mapping_id: Option<String>,
 }
 
-#[derive(Deserialize, Type, Debug)]
+#[derive(DeserializeDict, Type, Debug)]
 #[zvariant(signature = "dict")]
 pub struct ScreenCastStartResponse {
     pub streams: Option<Vec<(u32, ScreenCastStartStream)>>,
@@ -149,12 +150,25 @@ impl ScreenCast<'_> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct WaylandVideoRecorder {
     #[allow(dead_code)]
     monitor: ImplMonitor,
     sender: Sender<Frame>,
     is_running: Arc<AtomicBool>,
+    active_sender: channel::Sender<bool>,
+}
+
+impl fmt::Debug for WaylandVideoRecorder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("WaylandVideoRecorder")
+            .field("monitor", &self.monitor)
+            .field("sender", &self.sender)
+            .field("is_running", &self.is_running)
+            // Sender is not Debug
+            // .field("control_tx", &self.control_tx)
+            .finish()
+    }
 }
 
 #[derive(Clone)]
@@ -165,6 +179,7 @@ struct ListenerUserData {
 impl WaylandVideoRecorder {
     pub fn new(monitor: ImplMonitor) -> XCapResult<(Self, Receiver<Frame>)> {
         let (sender, receiver) = mpsc::channel();
+        let (active_sender, active_receiver) = channel::channel();
 
         let screen_cast = ScreenCast::new()?;
         let session = screen_cast.create_session()?;
@@ -183,14 +198,19 @@ impl WaylandVideoRecorder {
             monitor,
             sender,
             is_running: Arc::new(AtomicBool::new(false)),
+            active_sender,
         };
 
-        recorder.pipewire_capturer(stream_id)?;
+        recorder.pipewire_capturer(stream_id, active_receiver)?;
 
         Ok((recorder, receiver))
     }
 
-    pub fn pipewire_capturer(&self, stream_id: u32) -> XCapResult<()> {
+    pub fn pipewire_capturer(
+        &self,
+        stream_id: u32,
+        active_receiver: channel::Receiver<bool>,
+    ) -> XCapResult<()> {
         let sender = self.sender.clone();
         let is_running = self.is_running.clone();
 
@@ -229,7 +249,7 @@ impl WaylandVideoRecorder {
                     let (media_type, media_subtype) = match format_utils::parse_format(param) {
                         Ok(v) => v,
                         Err(err) => {
-                            log::error!("Failed to parse format: {:?}", err);
+                            log::error!("Failed to parse format: {err:?}");
                             return;
                         }
                     };
@@ -239,14 +259,11 @@ impl WaylandVideoRecorder {
                     }
 
                     if let Err(err) = user_data.format.parse(param) {
-                        log::error!("Failed to parse format: {:?}", err);
+                        log::error!("Failed to parse format: {err:?}");
                     }
                 })
                 .process(move |stream, user_data| {
                     let state = is_running.load(Ordering::Relaxed);
-                    if !state {
-                        return;
-                    }
                     match stream.dequeue_buffer() {
                         None => log::info!("stream.dequeue_buffer() returned None"),
                         Some(mut buffer) => {
@@ -290,7 +307,10 @@ impl WaylandVideoRecorder {
                                     }
                                 };
 
-                                let _ = sender.send(Frame::new(size.width, size.height, buffer));
+                                if state {
+                                    let _ =
+                                        sender.send(Frame::new(size.width, size.height, buffer));
+                                }
                             }
                         }
                     }
@@ -361,6 +381,20 @@ impl WaylandVideoRecorder {
                 &mut params,
             )?;
 
+            // Used to pause/resume the stream
+            let _attached = active_receiver.attach(main_loop.loop_(), {
+                move |active| {
+                    if let Err(e) = stream.set_active(active) {
+                        log::error!("Failed to set stream active={active}: {e:?}");
+                    }
+                    if !active {
+                        if let Err(e) = stream.flush(true) {
+                            log::error!("Failed to flush: {e:?}");
+                        }
+                    }
+                }
+            });
+
             main_loop.run();
 
             Result::<(), XCapError>::Ok(())
@@ -371,11 +405,13 @@ impl WaylandVideoRecorder {
 
     pub fn start(&self) -> XCapResult<()> {
         self.is_running.store(true, Ordering::Relaxed);
+        let _ = self.active_sender.send(true);
         Ok(())
     }
 
     pub fn stop(&self) -> XCapResult<()> {
         self.is_running.store(false, Ordering::Relaxed);
+        let _ = self.active_sender.send(false);
         Ok(())
     }
 }
