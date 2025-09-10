@@ -3,7 +3,7 @@ use std::sync::mpsc::Receiver;
 use image::RgbaImage;
 use objc2::MainThreadMarker;
 use objc2_app_kit::NSScreen;
-use objc2_core_foundation::CGPoint;
+use objc2_core_foundation::{CGPoint, CGRect};
 use objc2_core_graphics::{
     CGDirectDisplayID, CGDisplayBounds, CGDisplayCopyDisplayMode, CGDisplayIsActive,
     CGDisplayIsBuiltin, CGDisplayIsMain, CGDisplayMode, CGDisplayRotation, CGError,
@@ -135,6 +135,11 @@ impl ImplMonitor {
             .unwrap_or(format!("Unknown Monitor {}", self.cg_direct_display_id));
 
         Ok(name)
+    }
+
+    pub fn bounds(&self) -> XCapResult<CGRect> {
+        let rect = unsafe { CGDisplayBounds(self.cg_direct_display_id) };
+        Ok(rect)
     }
 
     pub fn x(&self) -> XCapResult<i32> {

@@ -4,8 +4,6 @@ use crate::{Monitor, error::XCapResult, platform::impl_window::ImplWindow};
 
 #[cfg(target_os = "windows")]
 use std::ffi::c_void;
-#[cfg(target_os = "windows")]
-use windows::Win32::Foundation::HWND;
 
 #[derive(Debug, Clone)]
 pub struct Window {

@@ -1,6 +1,6 @@
 use std::mem;
 
-use image::RgbaImage;
+use image::{RgbImage, RgbaImage};
 use scopeguard::{ScopeGuard, guard};
 use widestring::U16CString;
 use windows::{
@@ -82,6 +82,29 @@ pub(super) fn bgra_to_rgba(mut buffer: Vec<u8>) -> Vec<u8> {
     buffer
 }
 
+pub(super) fn bgra_to_rgb(bgra_data: &[u8]) -> Vec<u8> {
+    let pixel_count = bgra_data.len() / 4;
+    let mut rgb_data = Vec::with_capacity(pixel_count * 3);
+
+    unsafe {
+        rgb_data.set_len(pixel_count * 3);
+
+        let bgra_ptr = bgra_data.as_ptr();
+        let rgb_ptr: *mut u8 = rgb_data.as_mut_ptr();
+
+        for i in 0..pixel_count {
+            let bgra_base = i * 4;
+            let rgb_base = i * 3;
+
+            *rgb_ptr.add(rgb_base) = *bgra_ptr.add(bgra_base + 2); // R
+            *rgb_ptr.add(rgb_base + 1) = *bgra_ptr.add(bgra_base + 1); // G
+            *rgb_ptr.add(rgb_base + 2) = *bgra_ptr.add(bgra_base); // B
+        }
+    }
+
+    rgb_data
+}
+
 pub(super) fn bgra_to_rgba_image(
     width: u32,
     height: u32,
@@ -89,6 +112,11 @@ pub(super) fn bgra_to_rgba_image(
 ) -> XCapResult<RgbaImage> {
     RgbaImage::from_raw(width, height, bgra_to_rgba(buffer))
         .ok_or_else(|| XCapError::new("RgbaImage::from_raw failed"))
+}
+
+pub(super) fn bgra_to_rgb_image(width: u32, height: u32, buffer: &[u8]) -> XCapResult<RgbImage> {
+    RgbImage::from_raw(width, height, bgra_to_rgb(buffer))
+        .ok_or_else(|| XCapError::new("RgbImage::from_raw failed"))
 }
 
 // 定义 GetProcessDpiAwareness 函数的类型

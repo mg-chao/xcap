@@ -1,5 +1,7 @@
 use std::sync::mpsc::Receiver;
 
+#[cfg(target_os = "windows")]
+use image::RgbImage;
 use image::RgbaImage;
 
 use crate::{
@@ -10,6 +12,9 @@ use crate::{
 pub struct Monitor {
     pub(crate) impl_monitor: ImplMonitor,
 }
+
+unsafe impl Send for Monitor {}
+unsafe impl Sync for Monitor {}
 
 impl Monitor {
     pub(crate) fn new(impl_monitor: ImplMonitor) -> Monitor {
@@ -97,12 +102,31 @@ impl Monitor {
 
         Ok((VideoRecorder::new(impl_video_recorder), sx))
     }
+
+    #[cfg(target_os = "windows")]
+    pub fn get_dev_mode_w(&self) -> XCapResult<windows::Win32::Graphics::Gdi::DEVMODEW> {
+        self.impl_monitor.get_dev_mode_w()
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn capture_image_rgb(&self) -> XCapResult<RgbImage> {
+        self.impl_monitor.capture_image_rgb()
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn capture_region_rgb(&self, x: u32, y: u32, width: u32, height: u32) -> XCapResult<RgbImage> {
+        self.impl_monitor.capture_region_rgb(x, y, width, height)
+    }
 }
 
 #[cfg(target_os = "macos")]
 impl Monitor {
     pub fn display_id(&self) -> XCapResult<u32> {
         self.impl_monitor.display_id()
+    }
+
+    pub fn bounds(&self) -> XCapResult<objc2_core_foundation::CGRect> {
+        self.impl_monitor.bounds()
     }
 }
 
