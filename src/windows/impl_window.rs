@@ -16,9 +16,7 @@ use windows::{
             Threading::{GetCurrentProcess, PROCESS_QUERY_LIMITED_INFORMATION},
         },
         UI::WindowsAndMessaging::{
-            EnumWindows, GWL_EXSTYLE, GetClassNameW, GetForegroundWindow, GetWindowLongPtrW,
-            GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindow,
-            IsWindowVisible, IsZoomed, WINDOW_EX_STYLE, WS_EX_TOOLWINDOW,
+            EnumWindows, GWL_EXSTYLE, GetClassNameW, GetForegroundWindow, GetWindowLongPtrW, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindow, IsWindowVisible, IsZoomed, WINDOW_EX_STYLE, WINDOWINFO, WS_EX_TOOLWINDOW
         },
     },
     core::{BOOL, HSTRING, PCWSTR},
@@ -356,6 +354,10 @@ impl ImplWindow {
 
     pub fn title(&self) -> XCapResult<String> {
         get_window_title(self.hwnd)
+    }
+
+    pub fn get_window_info(&self) -> XCapResult<WINDOWINFO> {
+        get_window_info(self.hwnd)
     }
 
     pub fn current_monitor(&self) -> XCapResult<ImplMonitor> {
