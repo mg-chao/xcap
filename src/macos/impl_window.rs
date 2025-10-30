@@ -21,6 +21,7 @@ pub struct ImplWindow {
 }
 
 unsafe impl Send for ImplWindow {}
+unsafe impl Sync for ImplWindow {}
 
 fn get_cf_dictionary_get_value(
     cf_dictionary: &CFDictionary,
